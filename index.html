@@ -22,6 +22,8 @@
             background-color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+            /* 优化页面加载动画 */
+            animation: fadeIn 0.5s ease-in-out forwards;
         }
         label {
             display: block;
@@ -55,6 +57,10 @@
         button:hover {
             background-color: #45a049;
         }
+        button:active {
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
         button.cancel {
             background-color: #f44336;
         }
@@ -73,14 +79,13 @@
             overflow: hidden;
             margin-top: 10px;
         }
-        .progress-bar {
-            width: 0;
-            height: 20px;
-            background-color: #4CAF50;
-            text-align: center;
-            line-height: 20px;
-            color: white;
-            transition: width 0.5s ease-in-out;
+
+        /* 新增纯静态百分比显示样式 */
+        #progressPercentage {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4CAF50;
+            min-height: 20px;
         }
         #statusMessage {
             margin-top: 10px;
@@ -92,269 +97,362 @@
             font-size: 14px;
             color: #777;
         }
+        #fileSizeDisplay {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #777;
+            animation: fadeIn 0.5s ease-in-out;
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
+
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
         }
-        .fade-in {
-            animation: fadeIn 0.5s forwards;
-        }
-        .fade-out {
-            animation: fadeOut 0.5s forwards;
-        }
+
+        /* 移除持续运行的进度条颜色动画 */
+
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
             }
         }
+        /* 新增大小信息样式 */
+        #sizeInfo {
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 id="pageTitle"></h1>
-        <label for="languageSelect">选择语言:</label>
-        <select id="languageSelect" onchange="changeLanguage()">
-            <option value="zh-CN">中文</option>
-            <option value="en-US">English</option>
-        </select>
-        <br>
-        <input type="file" id="fileInput" onchange="displayFileSize()">
-        <br>
-        <label id="amountToAddLabel"></label>
-        <input type="number" id="amountToAdd" value="1" oninput="updateExpectedFileSize()">
-        <select id="unitSelect" onchange="updateExpectedFileSize()">
-            <option value="bytes" id="bytesOption"></option>
-            <option value="kb" id="kbOption"></option>
-            <option value="mb" id="mbOption"></option>
-            <option value="gb" id="gbOption"></option>
-        </select>
-        <button onclick="increaseFileSize()" id="increaseButton"></button>
-        <button onclick="cancelOperation()" id="cancelButton" class="cancel" style="display: none;">取消</button>
-        <div id="expectedFileSize"></div>
-        <div class="progress-container">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div id="statusMessage"></div>
-        <div id="output"></div>
-        <div id="fileSizeDisplay"></div>
+<div class="container">
+    <h1 id="pageTitle"></h1>
+    <br>
+    <input type="file" id="fileInput" onchange="displayFileSize()">
+    <br>
+    <label for="amountToAdd" id="amountToAddLabel">要添加的增量值：</label>
+    <input type="number" id="amountToAdd" value="1" oninput="updateExpectedFileSize()">
+    <label for="unitSelect" id="unitSelectLabel">单位:</label>
+    <select id="unitSelect" onchange="updateExpectedFileSize()">
+        <option value="bytes" id="bytesOption">字节</option>
+        <option value="kb" id="kbOption">KB</option>
+        <option value="mb" id="mbOption">MB</option>
+        <option value="gb" id="gbOption">GB</option>
+    </select>
+    <button onclick="increaseFileSize()" id="increaseButton"></button>
+    <button onclick="cancelOperation()" id="cancelButton" class="cancel" style="display: none;">取消</button>
+    <div id="expectedFileSize"></div>
+    <div class="progress-container">
+        <div id="progressPercentage" style="text-align: center; margin: 10px 0;"></div>
     </div>
+    <div id="statusMessage"></div>
+    <!-- 新增大小信息显示 -->
+    <div id="sizeInfo" style="margin-top: 8px; font-size: 14px; color: #555; text-align: center; display: none;"></div>
+    <div id="output"></div>
+    <div id="fileSizeDisplay"></div>
+</div>
 
-    <script>
-        const translations = {
-            'zh-CN': {
-                pageTitle: "增加文件大小",
-                amountToAddLabel: "要增加的数量:",
-                bytesOption: "字节",
-                kbOption: "KB",
-                mbOption: "MB",
-                gbOption: "GB",
-                increaseButton: "增加大小",
-                cancelButton: "取消",
-                readingFile: "正在读取...",
-                increasingFileSize: "正在增加...",
-                preparingDownload: "准备下载...",
-                fileSizeIncreased: "文件大小增加了",
-                expectedFileSize: "预计增加后的文件大小:"
-            },
-            'en-US': {
-                pageTitle: "Increase File Size",
-                amountToAddLabel: "Amount to add:",
-                bytesOption: "Bytes",
-                kbOption: "KB",
-                mbOption: "MB",
-                gbOption: "GB",
-                increaseButton: "Increase Size",
-                cancelButton: "Cancel",
-                readingFile: "Reading file...",
-                increasingFileSize: "Increasing file size...",
-                preparingDownload: "Preparing download...",
-                fileSizeIncreased: "File size increased by",
-                expectedFileSize: "Expected file size after increase:"
+<script>
+    const translations = {
+        'zh-CN': {
+            pageTitle: "增加文件大小",
+            amountToAddLabel: "要增加的数量:",
+            bytesOption: "字节",
+            kbOption: "KB",
+            mbOption: "MB",
+            gbOption: "GB",
+            increaseButton: "增加大小",
+            cancelButton: "取消",
+            readingFile: "正在读取...",
+            increasingFileSize: "正在增加...",
+            preparingDownload: "准备下载...",
+            fileSizeIncreased: "文件大小增加了",
+            expectedFileSize: "预计增加后的文件大小:",
+            unitSelectLabel: "单位:"
+        },
+        'en-US': {
+            pageTitle: "Increase File Size",
+            amountToAddLabel: "Amount to add:",
+            bytesOption: "Bytes",
+            kbOption: "KB",
+            mbOption: "MB",
+            gbOption: "GB",
+            increaseButton: "Increase Size",
+            cancelButton: "Cancel",
+            readingFile: "Reading file...",
+            increasingFileSize: "Increasing file size...",
+            preparingDownload: "Preparing download...",
+            fileSizeIncreased: "File size increased by",
+            expectedFileSize: "Expected file size after increase:",
+            unitSelectLabel: "Unit:"
+        }
+    };
+
+    let selectedLanguage = 'zh-CN';
+    let cancelRequested = false;
+
+    function updateContent(language) {
+        document.getElementById('pageTitle').innerText = translations[language].pageTitle;
+        document.getElementById('amountToAddLabel').innerText = translations[language].amountToAddLabel;
+        document.getElementById('bytesOption').innerText = translations[language].bytesOption;
+        document.getElementById('kbOption').innerText = translations[language].kbOption;
+        document.getElementById('mbOption').innerText = translations[language].mbOption;
+        document.getElementById('gbOption').innerText = translations[language].gbOption;
+        document.getElementById('increaseButton').innerText = translations[language].increaseButton;
+        document.getElementById('cancelButton').innerText = translations[language].cancelButton;
+        document.getElementById('expectedFileSize').innerText = translations[language].expectedFileSize;
+        document.getElementById('unitSelectLabel').innerText = translations[language].unitSelectLabel;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return bytes + ' Bytes';
+    }
+
+    function displayFileSize() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+        document.getElementById('fileSizeDisplay').innerText = `原始文件大小: ${formatFileSize(file.size)}`;
+        updateExpectedFileSize();
+    }
+
+    function convertToBytes(amount, unit) {
+        switch (unit.toLowerCase()) {
+            case 'kb': return amount * 1024;
+            case 'mb': return amount * 1024 * 1024;
+            case 'gb': return amount * 1024 * 1024 * 1024;
+            default: return amount;
+        }
+    }
+
+    function resetProgressBar() {
+        document.getElementById('progressPercentage').textContent = '';
+        // 保留sizeInfo显示
+    }
+
+    function updateStatusMessage(message) {
+        const statusElement = document.getElementById('statusMessage');
+        statusElement.innerText = message;
+
+        // 如果正在处理大文件（>50MB）且显示时间超过500ms，显示大小信息
+        if (totalSize && Date.now() - processingStartTime > 500) {
+            showSizeInfo();
+        }
+    }
+
+    function showCancelButton(show) {
+        const cancelButton = document.getElementById('cancelButton');
+        if (show) {
+            cancelButton.style.display = 'inline-block';
+            cancelButton.classList.add('fade-in');
+            cancelButton.classList.remove('fade-out');
+        } else {
+            cancelButton.classList.add('fade-out');
+            setTimeout(() => cancelButton.style.display = 'none', 500);
+        }
+    }
+
+    function increaseFileSize() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) {
+            alert(translations[selectedLanguage].pleaseSelectAFile);
+            return;
+        }
+
+        const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
+        const unitSelect = document.getElementById('unitSelect').value;
+        const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
+
+        // 创建独立的Worker处理所有文件操作
+        const worker = new Worker(URL.createObjectURL(new Blob([`
+                self.onmessage = function(e) {
+                    const { file, bytesToAdd, chunkSize } = e.data;
+                    
+                    // 使用流式处理
+                    let offset = 0;
+                    const totalSize = file.size + bytesToAdd;
+                    const chunks = Math.ceil(file.size / chunkSize);
+                    const blobParts = [];
+                    
+                    // 模拟文件读取
+                    function readNextChunk() {
+                        if (offset >= file.size) {
+                            // 文件读取完成，开始填充数据
+                            fillAdditionalData(blobParts, bytesToAdd, chunkSize);
+                            return;
+                        }
+                        
+                        // 模拟读取文件块
+                        const slice = file.slice(offset, offset + chunkSize);
+                        const reader = new FileReaderSync();
+                        const arrayBuffer = reader.readAsArrayBuffer(slice);
+                        
+                        blobParts.push(arrayBuffer);
+                        offset += arrayBuffer.byteLength;
+                        
+                        // 报告进度
+                        const progress = Math.floor((offset / file.size) * 75);
+                        self.postMessage({ 
+                            progress: progress,
+                            totalSize: totalSize,
+                            processedSize: offset
+                        });
+                        
+                        setTimeout(readNextChunk, 0);
+                    }
+                    
+                    function fillAdditionalData(parts, size, chunkSize) {
+                        const chunks = Math.ceil(size / chunkSize);
+                        
+                        for (let i = 0; i < chunks; i++) {
+                            if (self.cancelRequested) return;
+                            
+                            const buffer = new ArrayBuffer(chunkSize);
+                            const view = new Uint8Array(buffer);
+                            view.fill(0);
+                            
+                            parts.push(buffer);
+                            
+                            // 报告进度
+                            const progress = Math.floor(75 + ((i + 1) / chunks) * 25);
+                            const processedSize = offset + (i * chunkSize);
+                            self.postMessage({ 
+                                progress: progress,
+                                totalSize: totalSize,
+                                processedSize: processedSize
+                            });
+                        }
+                        
+                        // 完成Blob构建
+                        const blob = new Blob(parts, { type: file.type });
+                        self.postMessage({ complete: true, blob: blob }, [blob]);
+                    }
+                    
+                    readNextChunk();
+                };
+                
+                self.cancelRequested = false;
+            `], { type: 'application/javascript' })));
+
+        // 使用单个消息通道通信
+        worker.onmessage = function(e) {
+            if (e.data.progress !== undefined) {
+                updateProgressBar(e.data.progress);
+
+                // 始终显示大小信息
+                const totalMB = (e.data.totalSize / (1024 * 1024)).toFixed(2);
+                const processedMB = (e.data.processedSize / (1024 * 1024)).toFixed(2);
+
+                document.getElementById('sizeInfo').innerHTML = `
+                        总大小: ${totalMB} MB<br>
+                        已完成: ${processedMB} MB
+                    `;
+            }
+
+            if (e.data.complete) {
+                // 使用异步操作创建下载链接
+                setTimeout(() => {
+                    const url = URL.createObjectURL(e.data.blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    // 显示完成信息
+                    document.getElementById('output').innerText =
+                        `${translations[selectedLanguage].fileSizeIncreased} ${formatFileSize(bytesToAdd)}.`;
+
+                    resetProgressBar();
+                    updateStatusMessage("");
+                    showCancelButton(false);
+                }, 0);
             }
         };
 
-        let selectedLanguage = 'zh-CN';
-        let cancelRequested = false;
+        // 启动Worker
+        const chunkSize = 1024 * 1024 * 5; // 增加到5MB分块
 
-        function updateContent(language) {
-            document.getElementById('pageTitle').innerText = translations[language].pageTitle;
-            document.getElementById('amountToAddLabel').innerText = translations[language].amountToAddLabel;
-            document.getElementById('bytesOption').innerText = translations[language].bytesOption;
-            document.getElementById('kbOption').innerText = translations[language].kbOption;
-            document.getElementById('mbOption').innerText = translations[language].mbOption;
-            document.getElementById('gbOption').innerText = translations[language].gbOption;
-            document.getElementById('increaseButton').innerText = translations[language].increaseButton;
-            document.getElementById('cancelButton').innerText = translations[language].cancelButton;
-            document.getElementById('expectedFileSize').innerText = translations[language].expectedFileSize;
-        }
+        // 将文件转换为可传输的格式
+        const fileReader = new FileReader();
+        fileReader.onload = function() {
+            // 将文件数据传递给Worker
+            worker.postMessage({
+                file: {
+                    size: file.size,
+                    name: file.name,
+                    type: file.type,
+                    arrayBuffer: fileReader.result
+                },
+                bytesToAdd: bytesToAdd,
+                chunkSize: chunkSize
+            }, [fileReader.result]);
 
-        function formatFileSize(bytes) {
-            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-            return bytes + ' Bytes';
-        }
+            // 释放内存
+            fileReader.result = null;
+        };
 
-        function displayFileSize() {
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) return;
-            document.getElementById('fileSizeDisplay').innerText = `原始文件大小: ${formatFileSize(file.size)}`;
-            updateExpectedFileSize();
-        }
+        fileReader.readAsArrayBuffer(file);
 
-        function convertToBytes(amount, unit) {
-            switch (unit.toLowerCase()) {
-                case 'kb': return amount * 1024;
-                case 'mb': return amount * 1024 * 1024;
-                case 'gb': return amount * 1024 * 1024 * 1024;
-                default: return amount;
-            }
-        }
+        // 更新UI
+        resetProgressBar();
+        updateStatusMessage(translations[selectedLanguage].readingFile);
+        showCancelButton(true);
+    }
 
-        function resetProgressBar() {
-            document.getElementById('progressBar').classList.remove('fade-in', 'fade-out');
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('progressBar').innerText = '';
-        }
+    // 简化后的updateProgressBar函数
+    function updateProgressBar(percentComplete) {
+        document.getElementById('progressPercentage').textContent =
+            `${Math.min(100, percentComplete)}%`;
+    }
 
-        function updateStatusMessage(message) {
-            document.getElementById('statusMessage').innerText = message;
-        }
+    function updateExpectedFileSize() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+        const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
+        const unitSelect = document.getElementById('unitSelect').value;
+        const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
+        const newSize = file.size + bytesToAdd;
+        document.getElementById('expectedFileSize').innerText = `${translations[selectedLanguage].expectedFileSize} ${formatFileSize(newSize)}`;
+    }
 
-        function showCancelButton(show) {
-            const cancelButton = document.getElementById('cancelButton');
-            if (show) {
-                cancelButton.style.display = 'inline-block';
-                cancelButton.classList.add('fade-in');
-                cancelButton.classList.remove('fade-out');
-            } else {
-                cancelButton.classList.add('fade-out');
-                setTimeout(() => cancelButton.style.display = 'none', 500);
-            }
-        }
+    function showSizeInfo() {
+        const sizeInfo = document.getElementById('sizeInfo');
+        sizeInfo.style.display = 'block'; // 始终显示
 
-        function increaseFileSize() {
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) {
-                alert(translations[selectedLanguage].pleaseSelectAFile);
-                return;
-            }
+        // 显示总大小（包括原始大小和新增大小）
+        const totalMB = (window.totalSize / (1024 * 1024)).toFixed(2);
+        const totalWithAdditionMB = ((window.totalSize || 0) + (window.processedSize || 0)) / (1024 * 1024);
 
-            const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
-            const unitSelect = document.getElementById('unitSelect').value;
-            const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
+        // 显示已完成大小
+        const processedMB = (window.processedSize / (1024 * 1024)).toFixed(2);
 
-            const reader = new FileReader();
-            const chunkSize = 1024 * 1024; // 每个块1MB
+        sizeInfo.innerHTML = `
+                总大小: ${totalWithAdditionMB.toFixed(2)} MB<br>
+                已完成: ${processedMB} MB
+            `;
+    }
 
-            resetProgressBar();
-            updateStatusMessage(translations[selectedLanguage].readingFile);
-            showCancelButton(true);
+    updateContent(selectedLanguage);
 
-            reader.onloadstart = () => {
-                resetProgressBar();
-                updateStatusMessage(translations[selectedLanguage].readingFile);
-            };
+    // 将关键变量直接绑定到window对象
+    window.totalSize = 0;
+    window.processedSize = 0;
+    window.processingStartTime = 0;
+    window.totalSizeWithAddition = 0;
 
-            reader.onprogress = event => {
-                if (event.lengthComputable && !cancelRequested) {
-                    const percentComplete = Math.floor((event.loaded / event.total) * 100);
-                    updateProgressBar(percentComplete);
-                }
-            };
+    // 修复按钮事件绑定（在DOM加载后执行）
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('increaseButton').addEventListener('click', increaseFileSize);
+    });
 
-            reader.onload = event => {
-                if (cancelRequested) {
-                    cancelRequested = false;
-                    showCancelButton(false);
-                    updateStatusMessage("");
-                    return;
-                }
-
-                const originalData = new Uint8Array(event.target.result);
-                const additionalData = new Uint8Array(bytesToAdd);
-                const combinedData = new Uint8Array(originalData.byteLength + additionalData.byteLength);
-                combinedData.set(originalData, 0);
-                combinedData.set(additionalData, originalData.byteLength);
-
-                let currentOffset = 0;
-                resetProgressBar();
-                updateStatusMessage(translations[selectedLanguage].increasingFileSize);
-
-                function writeChunk(offset) {
-                    if (offset < combinedData.byteLength && !cancelRequested) {
-                        const end = Math.min(offset + chunkSize, combinedData.byteLength);
-                        offset += chunkSize;
-                        const percentComplete = Math.floor((offset / combinedData.byteLength) * 100);
-                        updateProgressBar(percentComplete);
-                        setTimeout(() => writeChunk(offset), 1); // 模拟写入时间
-                    } else {
-                        if (cancelRequested) {
-                            cancelRequested = false;
-                            showCancelButton(false);
-                            updateStatusMessage("");
-                            return;
-                        }
-                        const blob = new Blob([combinedData], { type: file.type });
-                        const url = URL.createObjectURL(blob);
-                        resetProgressBar();
-                        updateStatusMessage(translations[selectedLanguage].preparingDownload);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = file.name;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        resetProgressBar();
-                        updateStatusMessage("");
-                        document.getElementById('output').innerText = `${translations[selectedLanguage].fileSizeIncreased} ${formatFileSize(bytesToAdd)}.`;
-                        showCancelButton(false);
-                    }
-                }
-
-                writeChunk(currentOffset);
-            };
-
-            reader.onerror = () => {
-                cancelRequested = false;
-                resetProgressBar();
-                updateStatusMessage("");
-                alert(translations[selectedLanguage].errorReadingFile);
-                showCancelButton(false);
-            };
-
-            reader.readAsArrayBuffer(file);
-        }
-
-        function cancelOperation() {
-            cancelRequested = true;
-            updateStatusMessage("操作已取消");
-            showCancelButton(false);
-        }
-
-        function updateProgressBar(percentComplete) {
-            document.getElementById('progressBar').classList.add('fade-in');
-            document.getElementById('progressBar').style.width = percentComplete + '%';
-            document.getElementById('progressBar').innerText = percentComplete + '%';
-        }
-
-        function updateExpectedFileSize() {
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) return;
-            const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
-            const unitSelect = document.getElementById('unitSelect').value;
-            const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
-            const newSize = file.size + bytesToAdd;
-            document.getElementById('expectedFileSize').innerText = `${translations[selectedLanguage].expectedFileSize} ${formatFileSize(newSize)}`;
-        }
-
-        updateContent(selectedLanguage);
-    </script>
+</script>
 </body>
 </html>
 
