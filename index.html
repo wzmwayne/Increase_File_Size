@@ -1,460 +1,85 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>增加文件大小</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f9f9f9;
-            color: #333;
-        }
-        h1 {
-            text-align: center;
-            color: #4CAF50;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            /* 优化页面加载动画 */
-            animation: fadeIn 0.5s ease-in-out forwards;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="file"],
-        input[type="number"],
-        select,
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            transition: border-color 0.3s ease;
-        }
-        input[type="file"]:focus,
-        input[type="number"]:focus,
-        select:focus,
-        button:focus {
-            border-color: #4CAF50;
-            outline: none;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        button:active {
-            transform: scale(0.95);
-            transition: transform 0.2s ease;
-        }
-        button.cancel {
-            background-color: #f44336;
-        }
-        button.cancel:hover {
-            background-color: #d32f2f;
-        }
-        #output {
-            margin-top: 20px;
-            font-size: 16px;
-            color: #333;
-        }
-        .progress-container {
-            width: 100%;
-            background-color: #e0e0df;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-
-        /* 新增纯静态百分比显示样式 */
-        #progressPercentage {
-            font-size: 16px;
-            font-weight: bold;
-            color: #4CAF50;
-            min-height: 20px;
-        }
-        #statusMessage {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #777;
-        }
-        #expectedFileSize {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #777;
-        }
-        #fileSizeDisplay {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #777;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
-        /* 移除持续运行的进度条颜色动画 */
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 15px;
-            }
-        }
-        /* 新增大小信息样式 */
-        #sizeInfo {
-            transition: opacity 0.3s ease;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>站点已关闭</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: #101013; color: #e8e8ea;
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans SC", sans-serif;
+    line-height: 1.75;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 0 20px 96px; }
+  h1 { font-size: clamp(26px, 4vw, 40px); margin: 0 0 8px; letter-spacing: .5px; }
+  .lead { color: #9aa0a6; margin: 0 0 32px; }
+  h2 { font-size: clamp(19px, 2.4vw, 24px); margin: 40px 0 12px; padding-left: 12px;
+        border-left: 5px solid #b3001b; }
+  p, li { font-size: clamp(15px, 1.7vw, 17px); }
+  ul { padding-left: 1.2em; }
+  li { margin: .35em 0; }
+  .card { background: #191a1f; border: 1px solid #2a2c33; border-radius: 14px;
+           padding: 22px 24px; margin: 18px 0; }
+  .muted { color: #8b9098; font-size: 14px; }
+  a { color: #ff6b6b; }
+  code { background: #22242b; padding: .12em .4em; border-radius: 6px; font-size: .92em; }
+</style>
 </head>
 <body>
-<div class="container">
-    <h1 id="pageTitle"></h1>
-    <br>
-    <input type="file" id="fileInput" onchange="displayFileSize()">
-    <br>
-    <label for="amountToAdd" id="amountToAddLabel">要添加的增量值：</label>
-    <input type="number" id="amountToAdd" value="1" oninput="updateExpectedFileSize()">
-    <label for="unitSelect" id="unitSelectLabel">单位:</label>
-    <select id="unitSelect" onchange="updateExpectedFileSize()">
-        <option value="bytes" id="bytesOption">字节</option>
-        <option value="kb" id="kbOption">KB</option>
-        <option value="mb" id="mbOption">MB</option>
-        <option value="gb" id="gbOption">GB</option>
-    </select>
-    <button onclick="increaseFileSize()" id="increaseButton"></button>
-    <button onclick="cancelOperation()" id="cancelButton" class="cancel" style="display: none;">取消</button>
-    <div id="expectedFileSize"></div>
-    <div class="progress-container">
-        <div id="progressPercentage" style="text-align: center; margin: 10px 0;"></div>
-    </div>
-    <div id="statusMessage"></div>
-    <!-- 新增大小信息显示 -->
-    <div id="sizeInfo" style="margin-top: 8px; font-size: 14px; color: #555; text-align: center; display: none;"></div>
-    <div id="output"></div>
-    <div id="fileSizeDisplay"></div>
+<div id="kab" role="alert">
+  <a href="https://keepandroidopen.org" target="_blank" rel="noopener">
+    Keep Android Open — 安卓必须保持开放
+  </a>
+  <div class="kab-sub">签名、安装与分发自由正在被侵蚀，请关注并参与：keepandroidopen.org</div>
+</div>
+<style>
+  /* 不可关闭、大号、置顶横幅 */
+  #kab {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647;
+    background: #b3001b; color: #fff;
+    padding: 18px 16px 16px;
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(0,0,0,.45);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans SC", sans-serif;
+    border-bottom: 4px solid #ffd400;
+  }
+  #kab a {
+    color: #fff; text-decoration: none;
+    font-size: clamp(24px, 4.2vw, 46px); font-weight: 900;
+    letter-spacing: .5px; line-height: 1.15;
+  }
+  #kab a:hover { text-decoration: underline; }
+  #kab .kab-sub { margin-top: 8px; font-size: clamp(13px, 1.5vw, 18px); opacity: .95; }
+  @media (max-width: 640px) { #kab { padding: 14px 10px 12px; } }
+</style>
+
+<main style="padding-top: 200px;">
+
+<h1>因学业原因，项目暂停更新</h1>
+<p class="lead">本人因学业原因，暂时放缓各项目更新，学业告一段落后继续。</p>
+
+<div class="card">
+  <h2 style="margin-top:0">公告</h2>
+  <p>因学业原因，账号下的仓库目前设为<strong>归档（只读）</strong>，本站不再提供任何下载、导航或资源链接，历史页面内容已移除。</p>
+  <p>仓库内容按「放弃所有权利」（Unlicense / 公有领域）发布，可自由取用、修改与再分发；暂停期间暂不提供支持与更新。</p>
 </div>
 
-<script>
-    const translations = {
-        'zh-CN': {
-            pageTitle: "增加文件大小",
-            amountToAddLabel: "要增加的数量:",
-            bytesOption: "字节",
-            kbOption: "KB",
-            mbOption: "MB",
-            gbOption: "GB",
-            increaseButton: "增加大小",
-            cancelButton: "取消",
-            readingFile: "正在读取...",
-            increasingFileSize: "正在增加...",
-            preparingDownload: "准备下载...",
-            fileSizeIncreased: "文件大小增加了",
-            expectedFileSize: "预计增加后的文件大小:",
-            unitSelectLabel: "单位:"
-        },
-        'en-US': {
-            pageTitle: "Increase File Size",
-            amountToAddLabel: "Amount to add:",
-            bytesOption: "Bytes",
-            kbOption: "KB",
-            mbOption: "MB",
-            gbOption: "GB",
-            increaseButton: "Increase Size",
-            cancelButton: "Cancel",
-            readingFile: "Reading file...",
-            increasingFileSize: "Increasing file size...",
-            preparingDownload: "Preparing download...",
-            fileSizeIncreased: "File size increased by",
-            expectedFileSize: "Expected file size after increase:",
-            unitSelectLabel: "Unit:"
-        }
-    };
+<h2>为什么关注 keepandroidopen.org</h2>
+<p>安卓生态正在从「开放安装」走向「受控分发」：侧载限制、开发者验证、平台签名垄断，会直接压缩个人开发者与普通用户的空间。这不是某一个应用的问题，而是整个平台的走向。</p>
+<p>请访问 <a href="https://keepandroidopen.org" target="_blank" rel="noopener">keepandroidopen.org</a> 了解进展与参与方式。</p>
 
-    let selectedLanguage = 'zh-CN';
-    let cancelRequested = false;
+<h2>本站现状</h2>
+<ul>
+  <li>下载链接、导航分组、旧版页面：<strong>已全部移除</strong>；</li>
+  <li>代码与文档：保留在 GitHub 仓库中（已归档，只读）；</li>
+  <li>许可：放弃所有权利，公有领域；</li>
+  <li>暂停期间暂不处理功能请求、问题反馈与合并请求，恢复后照常。</li>
+</ul>
+<p class="muted">暂停期间页面不再更新。</p>
 
-    function updateContent(language) {
-        document.getElementById('pageTitle').innerText = translations[language].pageTitle;
-        document.getElementById('amountToAddLabel').innerText = translations[language].amountToAddLabel;
-        document.getElementById('bytesOption').innerText = translations[language].bytesOption;
-        document.getElementById('kbOption').innerText = translations[language].kbOption;
-        document.getElementById('mbOption').innerText = translations[language].mbOption;
-        document.getElementById('gbOption').innerText = translations[language].gbOption;
-        document.getElementById('increaseButton').innerText = translations[language].increaseButton;
-        document.getElementById('cancelButton').innerText = translations[language].cancelButton;
-        document.getElementById('expectedFileSize').innerText = translations[language].expectedFileSize;
-        document.getElementById('unitSelectLabel').innerText = translations[language].unitSelectLabel;
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-        if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-        if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-        return bytes + ' Bytes';
-    }
-
-    function displayFileSize() {
-        const file = document.getElementById('fileInput').files[0];
-        if (!file) return;
-        document.getElementById('fileSizeDisplay').innerText = `原始文件大小: ${formatFileSize(file.size)}`;
-        updateExpectedFileSize();
-    }
-
-    function convertToBytes(amount, unit) {
-        switch (unit.toLowerCase()) {
-            case 'kb': return amount * 1024;
-            case 'mb': return amount * 1024 * 1024;
-            case 'gb': return amount * 1024 * 1024 * 1024;
-            default: return amount;
-        }
-    }
-
-    function resetProgressBar() {
-        document.getElementById('progressPercentage').textContent = '';
-        // 保留sizeInfo显示
-    }
-
-    function updateStatusMessage(message) {
-        const statusElement = document.getElementById('statusMessage');
-        statusElement.innerText = message;
-
-        // 如果正在处理大文件（>50MB）且显示时间超过500ms，显示大小信息
-        if (totalSize && Date.now() - processingStartTime > 500) {
-            showSizeInfo();
-        }
-    }
-
-    function showCancelButton(show) {
-        const cancelButton = document.getElementById('cancelButton');
-        if (show) {
-            cancelButton.style.display = 'inline-block';
-            cancelButton.classList.add('fade-in');
-            cancelButton.classList.remove('fade-out');
-        } else {
-            cancelButton.classList.add('fade-out');
-            setTimeout(() => cancelButton.style.display = 'none', 500);
-        }
-    }
-
-    function increaseFileSize() {
-        const file = document.getElementById('fileInput').files[0];
-        if (!file) {
-            alert(translations[selectedLanguage].pleaseSelectAFile);
-            return;
-        }
-
-        const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
-        const unitSelect = document.getElementById('unitSelect').value;
-        const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
-
-        // 创建独立的Worker处理所有文件操作
-        const worker = new Worker(URL.createObjectURL(new Blob([`
-                self.onmessage = function(e) {
-                    const { file, bytesToAdd, chunkSize } = e.data;
-                    
-                    // 使用流式处理
-                    let offset = 0;
-                    const totalSize = file.size + bytesToAdd;
-                    const chunks = Math.ceil(file.size / chunkSize);
-                    const blobParts = [];
-                    
-                    // 模拟文件读取
-                    function readNextChunk() {
-                        if (offset >= file.size) {
-                            // 文件读取完成，开始填充数据
-                            fillAdditionalData(blobParts, bytesToAdd, chunkSize);
-                            return;
-                        }
-                        
-                        // 模拟读取文件块
-                        const slice = file.slice(offset, offset + chunkSize);
-                        const reader = new FileReaderSync();
-                        const arrayBuffer = reader.readAsArrayBuffer(slice);
-                        
-                        blobParts.push(arrayBuffer);
-                        offset += arrayBuffer.byteLength;
-                        
-                        // 报告进度
-                        const progress = Math.floor((offset / file.size) * 75);
-                        self.postMessage({ 
-                            progress: progress,
-                            totalSize: totalSize,
-                            processedSize: offset
-                        });
-                        
-                        setTimeout(readNextChunk, 0);
-                    }
-                    
-                    function fillAdditionalData(parts, size, chunkSize) {
-                        const chunks = Math.ceil(size / chunkSize);
-                        
-                        for (let i = 0; i < chunks; i++) {
-                            if (self.cancelRequested) return;
-                            
-                            const buffer = new ArrayBuffer(chunkSize);
-                            const view = new Uint8Array(buffer);
-                            view.fill(0);
-                            
-                            parts.push(buffer);
-                            
-                            // 报告进度
-                            const progress = Math.floor(75 + ((i + 1) / chunks) * 25);
-                            const processedSize = offset + (i * chunkSize);
-                            self.postMessage({ 
-                                progress: progress,
-                                totalSize: totalSize,
-                                processedSize: processedSize
-                            });
-                        }
-                        
-                        // 完成Blob构建
-                        const blob = new Blob(parts, { type: file.type });
-                        self.postMessage({ complete: true, blob: blob }, [blob]);
-                    }
-                    
-                    readNextChunk();
-                };
-                
-                self.cancelRequested = false;
-            `], { type: 'application/javascript' })));
-
-        // 使用单个消息通道通信
-        worker.onmessage = function(e) {
-            if (e.data.progress !== undefined) {
-                updateProgressBar(e.data.progress);
-
-                // 始终显示大小信息
-                const totalMB = (e.data.totalSize / (1024 * 1024)).toFixed(2);
-                const processedMB = (e.data.processedSize / (1024 * 1024)).toFixed(2);
-
-                document.getElementById('sizeInfo').innerHTML = `
-                        总大小: ${totalMB} MB<br>
-                        已完成: ${processedMB} MB
-                    `;
-            }
-
-            if (e.data.complete) {
-                // 使用异步操作创建下载链接
-                setTimeout(() => {
-                    const url = URL.createObjectURL(e.data.blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = file.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-
-                    // 显示完成信息
-                    document.getElementById('output').innerText =
-                        `${translations[selectedLanguage].fileSizeIncreased} ${formatFileSize(bytesToAdd)}.`;
-
-                    resetProgressBar();
-                    updateStatusMessage("");
-                    showCancelButton(false);
-                }, 0);
-            }
-        };
-
-        // 启动Worker
-        const chunkSize = 1024 * 1024 * 5; // 增加到5MB分块
-
-        // 将文件转换为可传输的格式
-        const fileReader = new FileReader();
-        fileReader.onload = function() {
-            // 将文件数据传递给Worker
-            worker.postMessage({
-                file: {
-                    size: file.size,
-                    name: file.name,
-                    type: file.type,
-                    arrayBuffer: fileReader.result
-                },
-                bytesToAdd: bytesToAdd,
-                chunkSize: chunkSize
-            }, [fileReader.result]);
-
-            // 释放内存
-            fileReader.result = null;
-        };
-
-        fileReader.readAsArrayBuffer(file);
-
-        // 更新UI
-        resetProgressBar();
-        updateStatusMessage(translations[selectedLanguage].readingFile);
-        showCancelButton(true);
-    }
-
-    // 简化后的updateProgressBar函数
-    function updateProgressBar(percentComplete) {
-        document.getElementById('progressPercentage').textContent =
-            `${Math.min(100, percentComplete)}%`;
-    }
-
-    function updateExpectedFileSize() {
-        const file = document.getElementById('fileInput').files[0];
-        if (!file) return;
-        const amountToAdd = parseFloat(document.getElementById('amountToAdd').value);
-        const unitSelect = document.getElementById('unitSelect').value;
-        const bytesToAdd = convertToBytes(amountToAdd, unitSelect);
-        const newSize = file.size + bytesToAdd;
-        document.getElementById('expectedFileSize').innerText = `${translations[selectedLanguage].expectedFileSize} ${formatFileSize(newSize)}`;
-    }
-
-    function showSizeInfo() {
-        const sizeInfo = document.getElementById('sizeInfo');
-        sizeInfo.style.display = 'block'; // 始终显示
-
-        // 显示总大小（包括原始大小和新增大小）
-        const totalMB = (window.totalSize / (1024 * 1024)).toFixed(2);
-        const totalWithAdditionMB = ((window.totalSize || 0) + (window.processedSize || 0)) / (1024 * 1024);
-
-        // 显示已完成大小
-        const processedMB = (window.processedSize / (1024 * 1024)).toFixed(2);
-
-        sizeInfo.innerHTML = `
-                总大小: ${totalWithAdditionMB.toFixed(2)} MB<br>
-                已完成: ${processedMB} MB
-            `;
-    }
-
-    updateContent(selectedLanguage);
-
-    // 将关键变量直接绑定到window对象
-    window.totalSize = 0;
-    window.processedSize = 0;
-    window.processingStartTime = 0;
-    window.totalSizeWithAddition = 0;
-
-    // 修复按钮事件绑定（在DOM加载后执行）
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('increaseButton').addEventListener('click', increaseFileSize);
-    });
-
-</script>
+</main>
 </body>
 </html>
-
-
-
